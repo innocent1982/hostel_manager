@@ -2,6 +2,7 @@ from rest_framework import serializers
 from django.conf import settings
 import uuid
 from django.core.mail import send_mail
+from booking.models import Booking, Payment
 
 User = settings["AUTH_USER_MODEL"] 
 
@@ -46,3 +47,15 @@ class UserSerializer(serializers.ModelSerializer):
             print(f"An error occured in create user in serializers: {type(e)}")
             raise serializers.ValidationError("Error in serializers create method")
 
+class BookingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Booking
+        fields = ["room", "user", "status"]
+
+
+class PaymentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Payment
+        fields = [
+       "booking", "amount" 
+        ]
