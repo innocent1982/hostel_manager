@@ -12,14 +12,16 @@ class Booking(models.Model):
         ("pending", "Pending"),
         ("approved", "Approved"),
         ("failed", "Failed"),
-        ("canceled", "Canceled")
+        ("phase2", "phase2")
     ]
-    room = models.ForeignKey(Room, on_delete=models.CASCADE)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    room = models.IntegerField()
+    name = models.CharField(max_length=50, blank=True)
+    email = models.EmailField(null=False, blank=False)
+    phone = models.CharField(max_length=13)
     status = models.CharField(choices=STATUS_CHOICES, max_length=20, default="pending")
     created_at = model.DateTimeField()
-    cost = models.DecimalField(max_digits=10, decimal_places=2)
-    tx_ref = models.CharField(max_length=100, unique=True, blank=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+#    tx_ref = models.CharField(max_length=100, unique=True, blank=True)
 
     def save(self):
         if not self.tx_ref

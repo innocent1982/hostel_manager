@@ -70,8 +70,9 @@ class PaymentView(APIView):
 
     def post(self, request, *args, **kwargs):
         data = request.data
-        user = booking.user
         booking = Booking.objects.get(tx_ref=data["tx_ref"])
+        user = booking.user
+
         if booking:
             url = "https://paychangu.com/verify"
             params = {
@@ -89,12 +90,19 @@ class PaymentView(APIView):
                 payment.save()
                 booking.status = "approved"
                 room = booking.room
+            
                 try:
                     room.add_occupant(user)
+                    user.room = room
+                    user.save()
+                    room.save()
                     return Response({"succes":f"Sucessfully assigned to room {room.number}"}, status=201)
                 except Exception as e:
                     print(f"Error while assigning user to room: {str(e)}")
                     return Response({"Failure":f"Failed to assign user to room {room.number}"}, status=400)
+            else:
+                booking.status = "failed"
+                return Response({"error, payment verrification failed"}, status=400)
 
 
 class BookingView(APIView):

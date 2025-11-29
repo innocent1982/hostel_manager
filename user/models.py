@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
+form datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta 
 
 class User(AbstractUser):
     ROLES = [
@@ -13,6 +15,15 @@ class User(AbstractUser):
     room = models.ForeignKey(Room, on_delete=models.CASCADE, blank=False, null=True)
     email_verified = models.BooleanField(default=False)
     email_code = models.CharField(max_length=86)
+    rent_due = models.DateTimeField()
+
+    def save(self, validated_data, *args, **kwargs):
+        room = self.room 
+        if room:
+            time = datetime.now()
+            due = time + timedelta(months=1)
+            self.rent_due = due
+        super().save(*args, **kwargs)
 
 
 class Location(models.Model):
@@ -35,6 +46,7 @@ class Room(models.Model):
     occupants = models.ManyToManyField(User, blank=True)
     status = models.CharField(choices = ROOM_STATUS, max_length=11, default="free", null=False, blank=False)
     price = models.DecimalField(max_digits=10, decimal_places=2)
+
 
     def add_occupant(self, user):
         if self.occupants.count() >= 2:

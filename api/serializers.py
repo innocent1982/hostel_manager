@@ -3,8 +3,20 @@ from django.conf import settings
 import uuid
 from django.core.mail import send_mail
 from booking.models import Booking, Payment
+from user.models import Room 
 
 User = settings["AUTH_USER_MODEL"] 
+
+
+class RoomSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Room
+        fields = [
+            "number", "capactiy", "location"
+        ]
+
+
+
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -50,7 +62,15 @@ class UserSerializer(serializers.ModelSerializer):
 class BookingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Booking
-        fields = ["room", "user", "status"]
+        fields = ["room", "id", "amount",  "name", "email", "phone", "status"]
+        extra_kwargs = {
+            "status":{
+                "read_only":True 
+            },
+            "amount":{
+                "read_only":True 
+            }
+        }
 
 
 class PaymentSerializer(serializers.ModelSerializer):
