@@ -63,6 +63,13 @@ def trigger_payment(request):
     else:
         return Response({"error":"failed to initiate payment"}, status=400)
 
+import secrets
+import string
+
+def generate_password(length=8):
+    chars = string.ascii_letters + string.digits + string.punctuation
+    return ''.join(secrets.choice(chars) for _ in range(length))
+
 
 from datetime import datetime
 class PaymentView(APIView):
@@ -71,7 +78,6 @@ class PaymentView(APIView):
     def post(self, request, *args, **kwargs):
         data = request.data
         booking = Booking.objects.get(tx_ref=data["tx_ref"])
-        user = booking.user
 
         if booking:
             url = "https://paychangu.com/verify"
@@ -92,11 +98,32 @@ class PaymentView(APIView):
                 room = booking.room
             
                 try:
-                    room.add_occupant(user)
-                    user.room = room
-                    user.save()
-                    room.save()
-                    return Response({"succes":f"Sucessfully assigned to room {room.number}"}, status=201)
+                    room = Room.objects.get(number=booking.room)
+                    name = booking.name
+                    email = booking.email
+                    phone = booking.phone
+                    password = generate_password()
+                    serializer = UserSerializer(data={"username":name, "password":password, "email":email, "phone":phone})
+                    if serializer.is_valid():
+                        serializer.save(room=room)
+                        data = serializer.data
+                        room.add_occupant(data.id)
+                        send_mail(
+                            subject= "Successful user creation",
+                            message=f"""
+                            You were successfully assigned to room {room.number}. The following are your account details,
+                            You can change them anytime:
+                            username: {data.username}
+                            password: {password}
+                            email: {data.email}
+                            """,
+                            from_email = "innocentkamesa05@gmail.com",
+                            recipient_list = [data.email],
+                            fail_silently=False
+                        )
+                        return Response({"mesage":"Successfully registered"}, status=200)
+           
+                    return Response({"error":f"Failed to create user account {serializer.errors}"}, status=404)
                 except Exception as e:
                     print(f"Error while assigning user to room: {str(e)}")
                     return Response({"Failure":f"Failed to assign user to room {room.number}"}, status=400)

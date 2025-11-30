@@ -21,7 +21,7 @@ class RoomSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["username", "password", "email", "student_id"]
+        fields = ["username", "password", "email"]
         extra_kwargs ={
             "password": {
                 "write_only":True
@@ -58,6 +58,7 @@ class UserSerializer(serializers.ModelSerializer):
         except Exception as e:
             print(f"An error occured in create user in serializers: {type(e)}")
             raise serializers.ValidationError("Error in serializers create method")
+
 
 class BookingSerializer(serializers.ModelSerializer):
     class Meta:
