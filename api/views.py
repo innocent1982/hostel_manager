@@ -9,7 +9,7 @@ import requests
 from rest_framework.decorators import api_view
 from booking.models import Booking, Payment
 import os
-from rest_framework.status import status
+from rest_framework import status
 
 
 class UserView(APIView):
@@ -31,37 +31,66 @@ class UserView(APIView):
         return Response({"eror":serializer.errors}, status=400)
 
 
+class RoomView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        rooms = Room.objects.filter(status="free")
+        if rooms:
+            boys = RoomSerializer(data=rooms.objects.filter(location="boys"), many=True)
+            bus = RoomSerializer(data=rooms.objects.filter(location="bus"), many=True)
+            mansion = RoomSerializer(data=rooms.objects.filter(location="mansion"), many=True)
+            ngombe = RoomSerializer(data=rooms.objects.filter(location="ngombe"), many=True)
+
+            data = {
+                "boys":boys,
+                "bus":bus,
+                "mansion":mansion,
+                "ngombe":ngombe
+            }
+            return Response({"data":data}, status=200)
+        else:
+            return Response({"error":"All rooms are occupied"}, status=400)
+
+
+
 @api_view(['GET'])
 def trigger_payment(request):
-    url = "https://paychangu.com/payments/initiate"
-    user = request.user 
-    booking = Booking.objects.get(user=user)
+    url = "https://paychangu.com/payments/initiate" 
+    booking = Booking.objects.get(email=request.data[email])
     if booking:
         payment_data = {
-            "amount":booking.cost,
-            "email":booking.user.email,
+            "amount":booking.amount,
+            "email":booking.email,
             "currency":"MKW",
             "tx_ref":booking.tx_ref,
             "callback_url":"http://127.0.0.1:8000/api/booking/verify-payment"
         }
-    headers = {
-        "content-type":"application/json",
-        "Authorization": f"Bearer {os.environ["PAYCHANGU_API_KEY"]}"
-    }
-    response = requests.post(url, headers=headers, json=payment_data)
-    if response.status_code == HTTP_200_OK:
-        data = {
-            "booking":booking.id,
-            "amount":booking.cost,
-            "status":"pending",
+        headers = {
+            "content-type":"application/json",
+            "Authorization": f"Bearer {os.environ["PAYCHANGU_API_KEY"]}"
         }
-        serializer = PaymentSerializer(data=data)
-        if serializer.is_valid():
-            serializer.save()
-        payment_url = response.json()["payment_url"]
-        return Response({"url":payment_url}, status=200)
+        response = requests.post(url, headers=headers, json=payment_data)
+        if response.status_code == HTTP_200_OK:
+            data = {
+                "booking":booking.id,
+                "amount":booking.cost,
+                "status":"pending",
+            }
+            serializer = PaymentSerializer(data=data)
+            if serializer.is_valid():
+                serializer.save()
+            payment_url = response.json()["payment_url"]
+            send_mail(
+                subject="Complete payment for room at Angonia",
+                message=f"Click the link to finish paying up for room {payment_url}",
+                send_mail="innocentkamesa05@gmail.com",
+                recipient_list = [booking.email],
+                fail_silently=False
+            )
+            return Response({"url":payment_url}, status=200)
     else:
-        return Response({"error":"failed to initiate payment"}, status=400)
+        return Response({"error":"failed to initiate payment, Booking not found"}, status=400)
 
 import secrets
 import string
@@ -95,7 +124,7 @@ class PaymentView(APIView):
                 payment.paid_at = datetime.now()
                 payment.save()
                 booking.status = "approved"
-                room = booking.room
+                booking.save()
             
                 try:
                     room = Room.objects.get(number=booking.room)
@@ -131,17 +160,17 @@ class PaymentView(APIView):
                 booking.status = "failed"
                 return Response({"error, payment verrification failed"}, status=400)
 
-
+    
 class BookingView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
         data = request.data 
-        room = Room.objects.get(location=data["location"], number=data["number"])
+        room = Room.objects.get(number=data["number"])
         if room.status == "unavailable" or room.status == "occupied":
             return Response({"error":"Room unavailable"}, status=400)
         serializer = BookingSerializer(data=data)
         if serializer.is_valid():
-            serializer.save(user=request.user, cost=room.price, status="pending")
+            serializer.save(amount=room.price, status="pending")
             return Response({"data":serializer.data}, status=201)
         return Response({"error":"Failed to book desired room"}, status=400)

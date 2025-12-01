@@ -1,10 +1,10 @@
-from django.urls import Path
-from rest_framwork_simplejwt.views import (
+from django.urls import path
+from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenVerifyView,
     TokenRefreshView
 )
-from .views import UserView, PaymentView RoomView, BookingView, trigger_payment
+from .views import UserView, PaymentView, RoomView, BookingView, trigger_payment
 
 urlpatterns = [
     path('auth/token/', TokenObtainPairView.as_view()),
@@ -14,6 +14,6 @@ urlpatterns = [
 
     path("rooms/get/", RoomView.as_view()),
     path("booking/create/", BookingView.as_view()),
-    path("booking/approve/", trigger_payment()),
-    path("payment/verify/", PaymentView.as_view())
+    path("booking/approve/", trigger_payment),
+    path("booking/verify-payment", PaymentView.as_view()),
 ]

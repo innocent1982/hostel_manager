@@ -4,8 +4,9 @@ import uuid
 from django.core.mail import send_mail
 from booking.models import Booking, Payment
 from user.models import Room 
+from django.contrib.auth import get_user_model
 
-User = settings["AUTH_USER_MODEL"] 
+User = get_user_model()
 
 
 class RoomSerializer(serializers.ModelSerializer):
